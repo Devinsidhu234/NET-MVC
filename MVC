@@ -1,0 +1,138 @@
+public class InsureeController : Controller
+{
+    // Other controller actions
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public ActionResult Create([Bind(Include = "Id,FirstName,LastName,EmailAddress,Age,CarYear,CarMake,CarModel,SpeedingTickets,HasDUI,IsFullCoverage")] Insuree insuree)
+    {
+        if (ModelState.IsValid)
+        {
+            // Start with a base of $50/month
+            decimal monthlyTotal = 50m;
+
+            // Add based on age
+            if (insuree.Age <= 18)
+            {
+                monthlyTotal += 100m;
+            }
+            else if (insuree.Age >= 19 && insuree.Age <= 25)
+            {
+                monthlyTotal += 50m;
+            }
+            else if (insuree.Age >= 26)
+            {
+                monthlyTotal += 25m;
+            }
+
+            // Add based on car's year
+            if (insuree.CarYear < 2000)
+            {
+                monthlyTotal += 25m;
+            }
+            else if (insuree.CarYear > 2015)
+            {
+                monthlyTotal += 25m;
+            }
+
+            // Add based on car's make and model
+            if (insuree.CarMake.ToLower() == "porsche")
+            {
+                monthlyTotal += 25m;
+
+                if (insuree.CarModel.ToLower() == "911 carrera")
+                {
+                    monthlyTotal += 25m; // Total of $50 for Porsche 911 Carrera
+                }
+            }
+
+            // Add $10 for every speeding ticket
+            monthlyTotal += insuree.SpeedingTickets * 10;
+
+            // Add 25% if the user has a DUI
+            if (insuree.HasDUI)
+            {
+                monthlyTotal *= 1.25m;
+            }
+
+            // Add 50% if the user wants full coverage
+            if (insuree.IsFullCoverage)
+            {
+                monthlyTotal *= 1.50m;
+            }
+
+            // Save the calculated quote
+            insuree.Quote = monthlyTotal;
+
+            // Add to the database
+            db.Insurees.Add(insuree);
+            db.SaveChanges();
+
+            return RedirectToAction("Index");
+        }
+
+        return View(insuree);
+    }
+}
+@model Devin.Models.Insuree
+
+@{
+    ViewBag.Title = "Create";
+}
+
+<h2>Create</h2>
+
+@using (Html.BeginForm()) 
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <h4>Insuree</h4>
+        <hr />
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+        <!-- Your form fields here, except for the Quote field -->
+
+        @Html.HiddenFor(model => model.Quote) <!-- Hidden Quote field -->
+        
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Create" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+}
+public ActionResult Admin()
+{
+    var insurees = db.Insurees.ToList(); // Fetch all insurees from the database
+    return View(insurees);
+}
+@model IEnumerable<YourNamespace.Models.Insuree>
+
+@{
+    ViewBag.Title = "Admin View";
+}
+
+<h2>Admin View: All Quotes</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Email</th>
+            <th>Quote</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var insuree in Model)
+        {
+            <tr>
+                <td>@insuree.FirstName</td>
+                <td>@insuree.LastName</td>
+                <td>@insuree.EmailAddress</td>
+                <td>@insuree.Quote.ToString("C")</td>
+            </tr>
+        }
+    </tbody>
+</table>
